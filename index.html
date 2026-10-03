@@ -2,26 +2,77 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <title>Admin - Website PKL</title>
+  <title>Admin - List Absensi PKL</title>
+  <link rel="stylesheet" href="css/style.css">
   <style>
-    body { font-family: Calibri, Arial, sans-serif; background: #f2f6fc; margin: 0; padding: 0; }
-    header { background: linear-gradient(90deg, #1F3864, #2E5395); color: #fff; padding: 25px; text-align: center; }
-    main { max-width: 800px; margin: 40px auto; background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.12); text-align: center; }
-    h2 { color: #1F3864; }
-    .btn { display: inline-block; margin-top: 20px; background: #2E5395; color: #fff; padding: 14px 30px; border-radius: 8px; text-decoration: none; font-size: 18px; }
-    .btn:hover { background: #1F3864; }
-    code { background: #eef3fb; padding: 3px 8px; border-radius: 4px; color: #1F3864; }
+    #tabelTabel td, #tabelTabel th { font-size:14px; }
+    .thumb { width:50px; border-radius:4px; border:1px solid #ccc; }
   </style>
 </head>
 <body>
-<header><h1>🔐 Halaman Admin - Absensi PKL</h1></header>
+<header>
+  <h1>📋 List Absensi Siswa PKL</h1>
+  <small style="color:#cfe0ff">Hanya admin yang dapat melihat — link rahasia</small>
+</header>
 <main>
-  <h2>📬 Data Absensi Masuk Email</h2>
-  <p>Setiap siswa yang mengirim absensi, datanya otomatis masuk ke email admin:</p>
-  <p style="font-size:22px;color:#1F3864;font-weight:bold">pklboashpoliteknik@gmail.com</p>
-  <p>Di email tersebut terdapat: nama siswa, asal sekolah, status (Masuk/Pulang), waktu, lokasi GPS, dan foto bukti sebagai lampiran.</p>
-  <a class="btn" href="https://mail.google.com/mail/u/0/#inbox">📧 Buka Gmail Admin</a>
-  <p style="margin-top:30px;color:#777;">Website siswa ada di:<br><code>https://universitasboashpkl.github.io/absensi-pkl/</code></p>
+  <h2>Data Absensi</h2>
+  <button id="ekspor" style="margin-bottom:15px">📥 Ekspor ke Excel</button>
+  <button id="muatUlang" style="background:#2E5395;margin-bottom:15px">🔄 Muat Ulang</button>
+  <table id="tabelTabel">
+    <thead>
+      <tr><th>No</th><th>Nama</th><th>Waktu</th><th>Asal Sekolah</th><th>Koordinat GPS</th><th>Status</th><th>Foto</th></tr>
+    </thead>
+    <tbody id="listAbsen"></tbody>
+  </table>
 </main>
+<footer>Sistem Absensi Jam Kerja PKL &copy; 2026</footer>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDHCN6nzqVYAjrataDYnhDREgElZa0x94E",
+  authDomain: "pklboash-5157f.firebaseapp.com",
+  projectId: "pklboash-5157f",
+  storageBucket: "pklboash-5157f.firebasestorage.app",
+  messagingSenderId: "8124585594",
+  appId: "1:8124585594:web:c9dd9f188fa8b306ff0dc3"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+let semuaData = [];
+
+async function muat() {
+  const tbody = document.getElementById('listAbsen');
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">Memuat...</td></tr>';
+  try {
+    const snap = await db.collection('absensi').orderBy('dibuat', 'desc').get();
+    semuaData = [];
+    snap.forEach(doc => semuaData.push(doc.data()));
+    tbody.innerHTML = semuaData.length === 0
+      ? '<tr><td colspan="7" style="text-align:center">Belum ada data absensi.</td></tr>' : '';
+    semuaData.forEach((d, i) => {
+      tbody.innerHTML += `<tr>
+        <td>${i+1}</td>
+        <td>${d.nama}</td>
+        <td>${d.waktu}</td>
+        <td>${d.sekolah}</td>
+        <td>${d.lokasi ? '<a href="https://www.google.com/maps?q='+d.lokasi+'" target="_blank">'+d.lokasi+'</a>' : '-'}</td>
+        <td>${d.status}</td>
+        <td>${d.foto ? '<img class="thumb" src="'+d.foto+'">' : '-'}</td>
+      </tr>`;
+    });
+  } catch (e) { tbody.innerHTML = '<tr><td colspan="7">Gagal: '+e.message+'</td></tr>'; }
+}
+document.getElementById('muatUlang').addEventListener('click', muat);
+document.getElementById('ekspor').addEventListener('click', function(){
+  if(semuaData.length===0){alert('Belum ada data.');return;}
+  const rows = semuaData.map((d,i)=>({No:i+1,Nama:d.nama,Waktu:d.waktu,'Asal Sekolah':d.sekolah,'Koordinat GPS':d.lokasi||'-',Status:d.status}));
+  const ws=XLSX.utils.json_to_sheet(rows);
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'List Absensi');
+  XLSX.writeFile(wb,'List_Absensi_PKL.xlsx');
+});
+window.addEventListener('load', muat);
+</script>
 </body>
 </html>
