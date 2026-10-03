@@ -18,6 +18,7 @@
   <h2>Data Absensi</h2>
   <button id="ekspor" style="margin-bottom:15px">📥 Ekspor ke Excel</button>
   <button id="muatUlang" style="background:#2E5395;margin-bottom:15px">🔄 Muat Ulang</button>
+  <button id="hapusSemua" style="background:#c0392b;margin-bottom:15px">🗑️ Hapus Semua List</button>
   <table id="tabelTabel">
     <thead>
       <tr><th>No</th><th>Nama</th><th>Waktu</th><th>Asal Sekolah</th><th>Koordinat GPS</th><th>Status</th><th>Foto</th></tr>
@@ -65,6 +66,17 @@ async function muat() {
   } catch (e) { tbody.innerHTML = '<tr><td colspan="7">Gagal: '+e.message+'</td></tr>'; }
 }
 document.getElementById('muatUlang').addEventListener('click', muat);
+document.getElementById('hapusSemua').addEventListener('click', async function(){
+  if(!confirm('Yakin ingin menghapus SEMUA data absensi secara permanen?')) return;
+  try {
+    const snap = await db.collection('absensi').get();
+    const arr = [];
+    snap.forEach(doc => arr.push(db.collection('absensi').doc(doc.id).delete()));
+    await Promise.all(arr);
+    alert('Semua data absensi berhasil dihapus!');
+    muat();
+  } catch (e) { alert('Gagal hapus: ' + e.message); }
+});
 document.getElementById('ekspor').addEventListener('click', function(){
   if(semuaData.length===0){alert('Belum ada data.');return;}
   const rows = semuaData.map((d,i)=>({No:i+1,Nama:d.nama,Waktu:d.waktu,'Asal Sekolah':d.sekolah,'Koordinat GPS':d.lokasi||'-',Status:d.status}));
